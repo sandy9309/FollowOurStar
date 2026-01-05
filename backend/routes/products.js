@@ -40,11 +40,12 @@ router.post('/order', auth, async (req, res) => {
             userId: req.user.id,        
             productId: product._id,
             productName: product.name,  
-            price: product.price
+            price: product.price,
+            status: 'pending' // 預設狀態為處理中
         });
 
         await newOrder.save();
-        res.json({ message: "💎 訂購成功！已加入您的歷史清單。" });
+        res.json({ message: " 訂購成功！已加入您的歷史清單。" });
     } catch (err) {
         res.status(500).json({ message: "訂購程序出錯" });
     }
@@ -65,7 +66,7 @@ router.get('/my-orders', auth, async (req, res) => {
     }
 });
 
-// 4. [Admin Create] 管理者上架商品 (Create)
+// 4. [Admin Create] 管理者上架商品
 router.post('/', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: "權限不足" });
@@ -79,31 +80,30 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-// 5. [Admin Update] 管理者更新商品庫存 (Update)
+// 5. [Admin Update] 管理者更新商品庫存
 router.put('/:id', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: "權限不足" });
     }
     try {
         const { stock } = req.body;
-        // 使用 findByIdAndUpdate 修改特定的 stock 欄位
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id, 
             { $set: { stock: parseInt(stock) } }, 
-            { new: true } // 返回修改後的數據
+            { new: true }
         );
         
         if (!updatedProduct) {
             return res.status(404).json({ message: "找不到該商品" });
         }
         
-        res.json({ message: '✨ 庫存總量已成功更新！', updatedProduct });
+        res.json({ message: ' 庫存總量已成功更新！', updatedProduct });
     } catch (err) {
         res.status(400).json({ message: "更新失敗" });
     }
 });
 
-// 6. [Admin Delete] 管理者下架商品 (Delete)
+// 6. [Admin Delete] 管理者下架商品
 router.delete('/:id', auth, async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ message: "權限不足" });
@@ -116,22 +116,48 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
+// --- 新增功能：8. [Admin Update Order] 管理員確認訂單狀態 ---
+router.put('/order/confirm/:orderId', auth, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: "權限不足" });
+    }
+    try {
+        const updatedOrder = await Order.findByIdAndUpdate(
+            req.params.orderId,
+            { $set: { status: 'confirmed' } },
+            { new: true }
+        );
+
+        if (!updatedOrder) {
+            return res.status(404).json({ message: "找不到該訂單" });
+        }
+
+        res.json({ message: " 訂單已成功確認！", updatedOrder });
+    } catch (err) {
+        res.status(500).json({ message: "更新訂單狀態失敗" });
+    }
+});
+
 // 7. [Delete Order] 取消/刪除訂單
 router.delete('/order/:orderId', auth, async (req, res) => {
     try {
-        let order;
-        if (req.user.role === 'admin') {
-            order = await Order.findById(req.params.orderId);
-        } else {
-            order = await Order.findOne({ _id: req.params.orderId, userId: req.user.id });
-        }
+        const order = await Order.findById(req.params.orderId);
 
         if (!order) {
-            return res.status(404).json({ message: "找不到該訂單或您無權操作" });
+            return res.status(404).json({ message: "找不到該訂單" });
+        }
+
+        // --- 核心安全檢查 ---
+        if (req.user.role !== 'admin' && order.status === 'confirmed') {
+            return res.status(403).json({ message: "⚠️ 訂單已由管理員確認處理中，無法自行取消。請聯繫客服！" });
+        }
+
+        if (req.user.role !== 'admin' && order.userId.toString() !== req.user.id) {
+            return res.status(403).json({ message: "您無權操作此訂單" });
         }
 
         await Order.findByIdAndDelete(req.params.orderId);
-        res.json({ message: "❌ 訂單紀錄已移除" });
+        res.json({ message: " 訂單紀錄已移除" });
     } catch (err) {
         res.status(500).json({ message: "操作失敗" });
     }

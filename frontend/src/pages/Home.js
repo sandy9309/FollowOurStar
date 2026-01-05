@@ -18,7 +18,7 @@ function Home({ user }) {
       .catch(err => console.error("抓取失敗:", err));
   };
 
-  // --- 新增：處理修改庫存 (Update) ---
+  // --- 處理修改庫存 (Update) ---
   const handleUpdateStock = async (productId, currentStock) => {
     const newStock = prompt("請輸入新的庫存總量 (這會影響剩餘庫存計算)：", currentStock);
     if (newStock === null || newStock === "") return;
@@ -35,22 +35,28 @@ function Home({ user }) {
       });
 
       if (res.ok) {
-        alert("✨ 庫存更新成功！");
+        alert(" 庫存更新成功！");
         fetchProducts(); // 重新整理列表看到最新庫存
       } else {
         const data = await res.json();
-        alert("❌ 修改失敗: " + data.message);
+        alert(" 修改失敗: " + data.message);
       }
     } catch (err) {
-      alert("❌ 無法連接到伺服器");
+      alert(" 無法連接到伺服器");
     }
   };
 
+  // --- 處理立即訂購 (含二次確認) ---
   const handleOrder = async (productId) => {
     if (!user) {
       alert("⚠️ 請先登入帳號後再進行訂購！");
       return;
     }
+
+    // 新增：二次確認對話框
+    const confirmOrder = window.confirm(" 確定要訂購這件 SEVENTEEN 周邊商品嗎？");
+    if (!confirmOrder) return; // 使用者按取消則中斷
+
     const token = localStorage.getItem('token');
     try {
       const res = await fetch('http://localhost:5000/api/products/order', {
@@ -64,15 +70,16 @@ function Home({ user }) {
       const data = await res.json();
       if (res.ok) {
         alert(data.message);
-        fetchProducts();
+        fetchProducts(); // 訂購後更新剩餘庫存顯示
       } else {
-        alert("❌ 訂購失敗: " + data.message);
+        alert(" 訂購失敗: " + data.message);
       }
     } catch (err) {
-      alert("❌ 無法連接到伺服器");
+      alert(" 無法連接到伺服器");
     }
   };
 
+  // --- 處理新增商品 ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -86,12 +93,12 @@ function Home({ user }) {
     });
 
     if (res.ok) {
-      alert("✨ 商品上架成功！");
+      alert(" 商品上架成功！");
       setShowAddForm(false);
       fetchProducts();
     } else {
       const errorData = await res.json();
-      alert("❌ 錯誤: " + errorData.message);
+      alert(" 錯誤: " + errorData.message);
     }
   };
 
@@ -115,8 +122,11 @@ function Home({ user }) {
           <input type="number" placeholder="初始庫存量" onChange={e => setNewProduct({...newProduct, stock: e.target.value})} required />
           <select onChange={e => setNewProduct({...newProduct, category: e.target.value})}>
             <option value="專輯">專輯</option>
-            <option value="應援物">應援物</option>
+            <option value="小卡">官方應援物</option>
+            <option value="官方周邊">官方周邊</option>
+            <option value="應援物">非官方應援物</option>
             <option value="小卡">小卡</option>
+            <option value="演唱會紀錄片">演唱會紀錄片</option>
           </select>
           <button type="submit" style={submitBtnStyle}>確認上架</button>
         </form>
@@ -133,16 +143,15 @@ function Home({ user }) {
               
               {isAdmin && (
                 <div style={adminInfoStyle}>
-                  <p>📈 已售出: {p.totalSold || 0} 件</p>
+                  <p> 已售出: {p.totalSold || 0} 件</p>
                   <p style={{ color: (p.remainingStock || 0) < 5 ? 'red' : 'green' }}>
-                    📦 剩餘庫存: {p.remainingStock}
+                     剩餘庫存: {p.remainingStock}
                   </p>
-                  {/* --- 修改按鈕 --- */}
                   <button 
                     onClick={() => handleUpdateStock(p._id, p.stock)}
                     style={editBtnStyle}
                   >
-                    ✏️ 修改總量
+                     修改總量
                   </button>
                 </div>
               )}

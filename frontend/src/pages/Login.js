@@ -29,7 +29,7 @@ function Login({ setUser }) {
 
     return (
         <div style={formContainer}>
-            <h2>💎 克拉會員登入</h2>
+            <h2> 會員登入</h2>
             <form onSubmit={handleSubmit} style={formStyle}>
                 <input type="email" placeholder="Email" onChange={e => setFormData({...formData, email: e.target.value})} required />
                 <input type="password" placeholder="密碼" onChange={e => setFormData({...formData, password: e.target.value})} required />
