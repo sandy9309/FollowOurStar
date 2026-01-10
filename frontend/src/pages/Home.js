@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 function Home({ user }) {
   const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(""); 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: '專輯', status: '現貨', stock: 10 });
 
@@ -17,6 +18,11 @@ function Home({ user }) {
       })
       .catch(err => console.error("抓取失敗:", err));
   };
+
+  // 2. 核心邏輯：根據關鍵字過濾商品 (針對名稱進行過濾)
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // --- 處理修改庫存 (Update) ---
   const handleUpdateStock = async (productId, currentStock) => {
@@ -35,8 +41,8 @@ function Home({ user }) {
       });
 
       if (res.ok) {
-        alert(" 庫存更新成功！");
-        fetchProducts(); // 重新整理列表看到最新庫存
+        alert("  庫存更新成功！");
+        fetchProducts();
       } else {
         const data = await res.json();
         alert(" 修改失敗: " + data.message);
@@ -46,16 +52,15 @@ function Home({ user }) {
     }
   };
 
-  // --- 處理立即訂購 (含二次確認) ---
+  // --- 處理立即訂購 ---
   const handleOrder = async (productId) => {
     if (!user) {
       alert("⚠️ 請先登入帳號後再進行訂購！");
       return;
     }
 
-    // 新增：二次確認對話框
     const confirmOrder = window.confirm(" 確定要訂購這件 SEVENTEEN 周邊商品嗎？");
-    if (!confirmOrder) return; // 使用者按取消則中斷
+    if (!confirmOrder) return;
 
     const token = localStorage.getItem('token');
     try {
@@ -70,16 +75,15 @@ function Home({ user }) {
       const data = await res.json();
       if (res.ok) {
         alert(data.message);
-        fetchProducts(); // 訂購後更新剩餘庫存顯示
+        fetchProducts();
       } else {
-        alert(" 訂購失敗: " + data.message);
+        alert("  訂購失敗: " + data.message);
       }
     } catch (err) {
       alert(" 無法連接到伺服器");
     }
   };
 
-  // --- 處理新增商品 ---
   const handleAddProduct = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -93,12 +97,12 @@ function Home({ user }) {
     });
 
     if (res.ok) {
-      alert(" 商品上架成功！");
+      alert("  商品上架成功！");
       setShowAddForm(false);
       fetchProducts();
     } else {
       const errorData = await res.json();
-      alert(" 錯誤: " + errorData.message);
+      alert("  錯誤: " + errorData.message);
     }
   };
 
@@ -106,10 +110,22 @@ function Home({ user }) {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>💎 SEVENTEEN 周邊代購清單</h2>
+      <header style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '30px' }}>
+        <h2 style={{ color: '#555' }}>💎 SEVENTEEN 周邊代購清單</h2>
+        
+        {/* 3. 加入搜尋欄位 */}
+        <div style={{ width: '100%', maxWidth: '500px', marginTop: '20px' }}>
+          <input 
+            type="text" 
+            placeholder="搜尋周邊名稱 (例如：FML, 應援物...)" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={searchBarStyle}
+          />
+        </div>
+
         {isAdmin && (
-          <button onClick={() => setShowAddForm(!showAddForm)} style={adminBtnStyle}>
+          <button onClick={() => setShowAddForm(!showAddForm)} style={{ ...adminBtnStyle, marginTop: '20px' }}>
             {showAddForm ? '取消新增' : '➕ 新增代購周邊'}
           </button>
         )}
@@ -122,7 +138,7 @@ function Home({ user }) {
           <input type="number" placeholder="初始庫存量" onChange={e => setNewProduct({...newProduct, stock: e.target.value})} required />
           <select onChange={e => setNewProduct({...newProduct, category: e.target.value})}>
             <option value="專輯">專輯</option>
-            <option value="小卡">官方應援物</option>
+            <option value="官方應援物">官方應援物</option>
             <option value="官方周邊">官方周邊</option>
             <option value="應援物">非官方應援物</option>
             <option value="小卡">小卡</option>
@@ -132,51 +148,67 @@ function Home({ user }) {
         </form>
       )}
 
+      {/* 4. 改用 filteredProducts 渲染列表 */}
       <div style={gridStyle}>
-        {products.map(p => {
-          const isOutOfStock = p.remainingStock <= 0;
-          return (
-            <div key={p._id} style={cardStyle}>
-              <h3>{p.name}</h3>
-              <p style={{ color: '#555', fontWeight: 'bold' }}>價格: ${p.price}</p>
-              <p>分類: {p.category}</p>
-              
-              {isAdmin && (
-                <div style={adminInfoStyle}>
-                  <p> 已售出: {p.totalSold || 0} 件</p>
-                  <p style={{ color: (p.remainingStock || 0) < 5 ? 'red' : 'green' }}>
-                     剩餘庫存: {p.remainingStock}
-                  </p>
-                  <button 
-                    onClick={() => handleUpdateStock(p._id, p.stock)}
-                    style={editBtnStyle}
-                  >
-                     修改總量
-                  </button>
-                </div>
-              )}
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map(p => {
+            const isOutOfStock = p.remainingStock <= 0;
+            return (
+              <div key={p._id} style={cardStyle}>
+                <h3>{p.name}</h3>
+                <p style={{ color: '#555', fontWeight: 'bold' }}>價格: ${p.price}</p>
+                <p>分類: {p.category}</p>
+                
+                {isAdmin && (
+                  <div style={adminInfoStyle}>
+                    <p> 已售出: {p.totalSold || 0} 件</p>
+                    <p style={{ color: (p.remainingStock || 0) < 5 ? 'red' : 'green' }}>
+                       剩餘庫存: {p.remainingStock}
+                    </p>
+                    <button 
+                      onClick={() => handleUpdateStock(p._id, p.stock)}
+                      style={editBtnStyle}
+                    >
+                       修改總量
+                    </button>
+                  </div>
+                )}
 
-              <button 
-                onClick={() => handleOrder(p._id)} 
-                disabled={isOutOfStock}
-                style={{
-                  ...orderBtnStyle, 
-                  backgroundColor: isOutOfStock ? '#ccc' : '#F7CAC9',
-                  cursor: isOutOfStock ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isOutOfStock ? '已售完' : '立即訂購'}
-              </button>
-            </div>
-          );
-        })}
+                <button 
+                  onClick={() => handleOrder(p._id)} 
+                  disabled={isOutOfStock}
+                  style={{
+                    ...orderBtnStyle, 
+                    backgroundColor: isOutOfStock ? '#ccc' : '#F7CAC9',
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isOutOfStock ? '已售完' : '立即訂購'}
+                </button>
+              </div>
+            );
+          })
+        ) : (
+          <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '50px', color: '#888' }}>
+             找不到相關的周邊商品 
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // 樣式設定
-const adminBtnStyle = { backgroundColor: '#92A8D1', color: 'white', padding: '10px', borderRadius: '5px', cursor: 'pointer', border: 'none' };
+const searchBarStyle = {
+  width: '100%',
+  padding: '12px 25px',
+  borderRadius: '25px',
+  border: '2px solid #F7CAC9',
+  outline: 'none',
+  fontSize: '1rem',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+};
+const adminBtnStyle = { backgroundColor: '#92A8D1', color: 'white', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', border: 'none', fontWeight: 'bold' };
 const submitBtnStyle = { backgroundColor: '#92A8D1', color: 'white', padding: '5px 15px', borderRadius: '5px', border: 'none', cursor: 'pointer' };
 const orderBtnStyle = { color: 'white', padding: '8px 16px', borderRadius: '5px', border: 'none', fontWeight: 'bold', width: '100%' };
 const addFormStyle = { background: '#f9f9f9', padding: '20px', marginBottom: '20px', borderRadius: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap', border: '1px dashed #92A8D1' };
