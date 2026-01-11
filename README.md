@@ -64,8 +64,8 @@ FollowOurStar 是一個專為 SEVENTEEN 代購設計的全端網頁應用程式�
 
 #### 步驟一：複製專案
 ``` 
-git clone https://github.com/sandy9309/project-name.git
-cd project-name
+git clone https://github.com/sandy9309/FollowOurStar.git
+cd FollowOurStar
 ```
 #### 步驟二：設定環境變數
 
