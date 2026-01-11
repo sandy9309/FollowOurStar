@@ -19,10 +19,16 @@ function Home({ user }) {
       .catch(err => console.error("抓取失敗:", err));
   };
 
-  // 2. 核心邏輯：根據關鍵字過濾商品 (針對名稱進行過濾)
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ 修改後的搜尋邏輯：同時針對「名稱」與「分類」進行過濾
+  const filteredProducts = products.filter(p => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      // 檢查名稱是否符合
+      p.name.toLowerCase().includes(searchLower) ||
+      // 檢查分類是否符合 (加入防錯判斷，確保 p.category 存在)
+      (p.category && p.category.toLowerCase().includes(searchLower))
+    );
+  });
 
   // --- 處理修改庫存 (Update) ---
   const handleUpdateStock = async (productId, currentStock) => {
@@ -41,7 +47,7 @@ function Home({ user }) {
       });
 
       if (res.ok) {
-        alert("  庫存更新成功！");
+        alert(" 庫存更新成功！");
         fetchProducts();
       } else {
         const data = await res.json();
@@ -77,7 +83,7 @@ function Home({ user }) {
         alert(data.message);
         fetchProducts();
       } else {
-        alert("  訂購失敗: " + data.message);
+        alert(" 訂購失敗: " + data.message);
       }
     } catch (err) {
       alert(" 無法連接到伺服器");
@@ -97,12 +103,12 @@ function Home({ user }) {
     });
 
     if (res.ok) {
-      alert("  商品上架成功！");
+      alert(" 商品上架成功！");
       setShowAddForm(false);
       fetchProducts();
     } else {
       const errorData = await res.json();
-      alert("  錯誤: " + errorData.message);
+      alert(" 錯誤: " + errorData.message);
     }
   };
 
@@ -113,11 +119,11 @@ function Home({ user }) {
       <header style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '30px' }}>
         <h2 style={{ color: '#555' }}>💎 SEVENTEEN 周邊代購清單</h2>
         
-        {/* 3. 加入搜尋欄位 */}
+        {/* ✅ 更新後的搜尋欄：增加提示文字 */}
         <div style={{ width: '100%', maxWidth: '500px', marginTop: '20px' }}>
           <input 
             type="text" 
-            placeholder="搜尋周邊名稱 (例如：FML, 應援物...)" 
+            placeholder="搜尋名稱或分類 (例如：專輯、應援物、小卡...)" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={searchBarStyle}
@@ -148,7 +154,7 @@ function Home({ user }) {
         </form>
       )}
 
-      {/* 4. 改用 filteredProducts 渲染列表 */}
+      {/* 使用 filteredProducts 渲染列表 */}
       <div style={gridStyle}>
         {filteredProducts.length > 0 ? (
           filteredProducts.map(p => {
@@ -190,7 +196,7 @@ function Home({ user }) {
           })
         ) : (
           <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '50px', color: '#888' }}>
-             找不到相關的周邊商品 
+              找不到相關的周邊商品 
           </div>
         )}
       </div>
@@ -198,7 +204,7 @@ function Home({ user }) {
   );
 }
 
-// 樣式設定
+// 樣式設定 (保持不變)
 const searchBarStyle = {
   width: '100%',
   padding: '12px 25px',

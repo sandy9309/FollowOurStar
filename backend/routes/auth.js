@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({ message: "註冊成功！請登入" });
     } catch (err) {
         console.error("註冊錯誤:", err);
-        res.status(500).json({ message: "註冊出錯，請稍後再試" });
+        res.status(500).json({ message: "暱稱重複" });
     }
 });
 
