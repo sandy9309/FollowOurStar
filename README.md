@@ -99,6 +99,15 @@ npm start
 完成以上步驟即可在瀏覽器中打開``` http://localhost:3000 ```來訪問 FollowOurStar 應用程式了！
 
 
+## 附件
+[API 文件](docs/api-spec.md)
+
+[系統架構圖](docs/architecture.png)
+
+[CRUD 流程圖](docs/flowchart.md)
+
+[Demo 影片](https://youtu.be/CO8KQV2KlQw)
+
 
 
 
